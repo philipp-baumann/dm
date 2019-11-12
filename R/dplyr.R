@@ -158,3 +158,42 @@ pull.dm <- function(.data, ...) {
 pull.zoomed_dm <- function(.data, var = -1) {
   pull(get_zoomed_tbl(.data), !!enquo(var))
 }
+
+grouped_df <- function(data, vars, drop = FALSE) {
+  if (is_dm(data)) {
+    check_zoomed(data)
+    return(replace_zoomed_tbl(data, dplyr::grouped_df(get_zoomed_tbl(data), vars, drop)))
+  }
+  dplyr::grouped_df(data, vars, drop)
+}
+
+add_tally <- function (x, wt, sort = FALSE, name = "n") {
+  wt <- enquo(wt)
+  if (quo_is_missing(wt) && "n" %in% tbl_vars(x)) {
+    inform("Using `n` as weighting variable")
+    wt <- quo(n)
+  }
+  if (quo_is_missing(wt) || quo_is_null(wt)) {
+    n <- quo(n())
+  }
+  else {
+    n <- quo(sum(!!wt, na.rm = TRUE))
+  }
+  n_name <- dplyr:::n_name(group_vars(x), name)
+  if (name != "n" && name %in% group_vars(x)) {
+    abort(glue("Column `{name}` already exists in grouped variables"))
+  }
+  out <- mutate(x, `:=`(!!n_name, !!n))
+  if (sort) {
+    out <- arrange(out, desc(!!sym(n_name)))
+  }
+  grouped_df(out, group_vars(x), drop = group_by_drop_default(x))
+}
+
+add_count <- function (x, ..., wt = NULL, sort = FALSE, name = "n") {
+  g <- group_vars(x)
+  grouped <- group_by(x, ..., add = TRUE)
+  out <- add_tally(grouped, wt = !!enquo(wt), sort = sort,
+                   name = name)
+  grouped_df(out, g, drop = group_by_drop_default(grouped))
+}
