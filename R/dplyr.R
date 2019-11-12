@@ -177,6 +177,14 @@ grouped_df <- function(data, vars, drop = FALSE) {
   dplyr::grouped_df(data, vars, drop)
 }
 
+# FIXME: taken from dplyr:::n_name(); otherwise note in R CMD check
+n_name <- function(x, name = "n") {
+  while (name %in% x) {
+    name <- paste0("n", name)
+  }
+  name
+}
+
 add_tally <- function (x, wt, sort = FALSE, name = "n") {
   wt <- enquo(wt)
   if (quo_is_missing(wt) && "n" %in% tbl_vars(x)) {
@@ -189,7 +197,7 @@ add_tally <- function (x, wt, sort = FALSE, name = "n") {
   else {
     n <- quo(sum(!!wt, na.rm = TRUE))
   }
-  n_name <- dplyr:::n_name(group_vars(x), name)
+  n_name <- n_name(group_vars(x), name)
   if (name != "n" && name %in% group_vars(x)) {
     abort(glue("Column `{name}` already exists in grouped variables"))
   }
